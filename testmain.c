@@ -3,12 +3,19 @@
 
 extern int memcpy2flash(void*dest, void *src, int size);
 
-unsigned char data[10020*1024] = {0xFF};
+void *dest_ptr = 0xFFFFFFFF90500003;
+
 
 int main(int argc, char **argv)
 {
-    printf ("0x%08x - 0x%08x\n", 0x80500008, 0x80500008+(10020*1024)); 
-    memcpy2flash((void*)0x80500008, data, (10020*1024));
+    printf ("%s - %s\n", __DATE__, __TIME__);
+
+    unsigned char data[129*1024];
+    printf ("0x%016llx - 0x%016llx\n", dest_ptr, dest_ptr + (129*1024));
+    memcpy2flash(dest_ptr, data, (129*1024));
+
+
+    printf ("exit\n");
 
     return 0;
 }

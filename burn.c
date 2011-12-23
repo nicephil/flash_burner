@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <string.h>
+#include <cvmx.h>
 
 /* adjusting each MACRO refer to CHIP Manual */
 /* assume 64Bit system and 16bit chip wide */
 
 #define LOCK_LOCKER()
 #define UNLOCK_LOCKER()
-#define GET_CYCLE()
+#define GET_CYCLE() cvmx_get_cycle()
 #define MALLOC(x) malloc(x)
 #define FREE(x) free(x)
 #define MEMCPY(d,s,z) memcpy(d,s,z)
@@ -19,10 +20,10 @@
 #define int64_t long long
 
 
-#define FLASH_BASE_ADDR 0xFFFFFFFF90000000
+#define FLASH_BASE_ADDR 0xFFFFFFFF90000000ULL
 #define WORD  volatile uint16_t
 #define WORD_T volatile uint16_t
-#define SIZE_T uint32_t
+#define SIZE_T uint64_t
 #define PRINTF(x...) printf(x)
 #define SECTOR_SIZE 0x20000
 #define MAX_BUFFER_WORD_COUNT 32
@@ -40,7 +41,7 @@
 #define CMD_WRITE_BUFFER_LOAD_DATA 0x0025
 #define CMD_WRITE_CONFIRM_DATA 0x0029
 
-#define ERASE_TIMEOUT 3276800000
+#define ERASE_TIMEOUT 3276800000ULL
 #define WRITE_TIMEOUT 409600 
 
 
@@ -62,6 +63,7 @@ inline int memcpy2flash (void *dest_addr, void *src_addr, SIZE_T size)
     SIZE_T extension2 = 0;
     void* fill1 = 0;
     void* fill2 = 0;
+    int i = 0;
 
     /* number of sectors */
     int n = (size+extension1)/SECTOR_SIZE; 
@@ -71,27 +73,32 @@ inline int memcpy2flash (void *dest_addr, void *src_addr, SIZE_T size)
     }
 
     PRINTF ("0x%016llx - 0x%016llx\n", sector_base_addr, sector_base_addr+n*SECTOR_SIZE);
-    PRINTF ("sector_base_addr:0x%08x, n:%d, extension1:0x%08x, extension2:0x%08x\n", 
+    PRINTF ("sector_base_addr:0x%016llx, n:%d, extension1:0x%016llx, extension2:0x%016llx\n", 
             sector_base_addr, n, extension1, extension2);
 
     /* store old value */
     if (extension1) {
         fill1 = (void*)MALLOC(extension1);
-        MEMCPY(fill1, sector_base_addr, extension1);
+        MEMCPY(fill1, (void*)(sector_base_addr), extension1);
     }
+
 
     if (extension2) {
         fill2 = (void*)MALLOC(extension2);
-        MEMCPY(fill2, (sector_base_addr+n*SECTOR_SIZE)-extension2, extension2);
+        printf ("0x%016llx\n", (sector_base_addr+n*SECTOR_SIZE)-extension2);
+        MEMCPY(fill2, (void*)((sector_base_addr+n*SECTOR_SIZE)-extension2-3), extension2+3);
+    }
+    
+    for (i = 0; i < extension2; i ++) {
+        printf ("0x%02x\n", *((uint8_t*)fill2+i));
     }
 
     /* erase sector */
     //erase_sector();
-
+    return 0;
 
 }
 
-#if 0
 /*
  * INPUT:
  * void *sector_addr[] - erased sector base addresses
@@ -128,7 +135,7 @@ inline int sector_erase (void *sector_addr[], int num)
 
     /* polling */
     WORD_T status = *(WORD_T*)(sector_addr[num-1]);
-    int start_cycle = GET_CYCLE();
+    uint64_t start_cycle = GET_CYCLE();
     while (1)
     {
         /* Read the status and xor it with the old status so we can
@@ -177,6 +184,7 @@ inline int sector_erase (void *sector_addr[], int num)
 }
 
 
+#if 0
 /*
  * INPUT:
  * void *dest_addr - destination address

@@ -25,7 +25,7 @@ run4: $(TARGET)
 # install
 install: $(TARGET)
 	scp $(TARGET) hzchlg06:~
-	ssh hzchlg06 "scp $(TARGET) fews:~"
+	ssh hzchlg06 "scp $(TARGET) fews:/tftpboot"
 
 
 # clean target
