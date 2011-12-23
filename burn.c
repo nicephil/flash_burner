@@ -1,12 +1,30 @@
+#include <stdio.h>
+#include <string.h>
+
 /* adjusting each MACRO refer to CHIP Manual */
+/* assume 64Bit system and 16bit chip wide */
+
 #define LOCK_LOCKER()
 #define UNLOCK_LOCKER()
 #define GET_CYCLE()
+#define MALLOC(x) malloc(x)
+#define FREE(x) free(x)
+#define MEMCPY(d,s,z) memcpy(d,s,z)
+
+#define uint8_t unsigned char
+#define uint16_t unsigned short
+#define uint32_t unsigned int
+#define uint64_t unsigned long long
+#define int32_t int
+#define int64_t long long
+
 
 #define FLASH_BASE_ADDR 0xFFFFFFFF90000000
 #define WORD  volatile uint16_t
 #define WORD_T volatile uint16_t
-#define SECTOR_SIZE 128*1024
+#define SIZE_T uint32_t
+#define PRINTF(x...) printf(x)
+#define SECTOR_SIZE 0x20000
 #define MAX_BUFFER_WORD_COUNT 32
 
 #define CMD_RESET_OFFSET 0x000
@@ -22,16 +40,65 @@
 #define CMD_WRITE_BUFFER_LOAD_DATA 0x0025
 #define CMD_WRITE_CONFIRM_DATA 0x0029
 
+#define ERASE_TIMEOUT 3276800000
 #define WRITE_TIMEOUT 409600 
 
 
+/*
+ * INPUT:
+ * void *dest_addr - destination address
+ * void *src_addr - source address
+ * SIZE_T size - how many bytes
+ * OUTPUT:
+ * -1 - failed
+ *  0 - succsse
+ *
+ */
+inline int memcpy2flash (void *dest_addr, void *src_addr, SIZE_T size)
+{
+    uint64_t sector_base_addr = ((uint64_t)dest_addr&
+            (~(SECTOR_SIZE-1)));
+    SIZE_T extension1 = (uint64_t)dest_addr%SECTOR_SIZE; 
+    SIZE_T extension2 = 0;
+    void* fill1 = 0;
+    void* fill2 = 0;
+
+    /* number of sectors */
+    int n = (size+extension1)/SECTOR_SIZE; 
+    if ((size+extension1)%SECTOR_SIZE) {
+        n++;
+        extension2 = SECTOR_SIZE - ((size+extension1)%SECTOR_SIZE);
+    }
+
+    PRINTF ("0x%016llx - 0x%016llx\n", sector_base_addr, sector_base_addr+n*SECTOR_SIZE);
+    PRINTF ("sector_base_addr:0x%08x, n:%d, extension1:0x%08x, extension2:0x%08x\n", 
+            sector_base_addr, n, extension1, extension2);
+
+    /* store old value */
+    if (extension1) {
+        fill1 = (void*)MALLOC(extension1);
+        MEMCPY(fill1, sector_base_addr, extension1);
+    }
+
+    if (extension2) {
+        fill2 = (void*)MALLOC(extension2);
+        MEMCPY(fill2, (sector_base_addr+n*SECTOR_SIZE)-extension2, extension2);
+    }
+
+    /* erase sector */
+    //erase_sector();
+
+
+}
+
+#if 0
 /*
  * INPUT:
  * void *sector_addr[] - erased sector base addresses
  * int num - how many sector base addresses specifed in sector_addr[]
  * OUTPUT:
  * -1 - failed
- * 0 - success
+ *  0 - success
  */
 inline int sector_erase (void *sector_addr[], int num)
 {
@@ -55,7 +122,7 @@ inline int sector_erase (void *sector_addr[], int num)
     
     for (i = 0; i < num; i ++) {
         /* write sector erase command */
-        *(WORD_T*) (sector_addr[0]) = CMD_SECTOR_ERASE_DATA;
+        *(WORD_T*) (sector_addr[num]) = CMD_SECTOR_ERASE_DATA;
     }
 
 
@@ -109,11 +176,15 @@ inline int sector_erase (void *sector_addr[], int num)
     return 0;
 }
 
+
 /*
  * INPUT:
  * void *dest_addr - destination address
  * void *data_addr - source address
  * int size - how many bytes
+ * OUTPUT:
+ * -1 - failed
+ *  0 - succsse
  *
  */
 inline int program_buffer (void *dest_addr, void *data_addr, int size)
@@ -170,10 +241,6 @@ inline int program_buffer (void *dest_addr, void *data_addr, int size)
         }
     }
 
-    /* Increment to the next byte */
-    ptr++;
-    offset+=2;
-
 
     /* write buffer abort reset */
     /* write unlock cycle 1 */
@@ -183,3 +250,4 @@ inline int program_buffer (void *dest_addr, void *data_addr, int size)
     /* reset chip */
     *(WORD_T*) (FLASH_BASE_ADDR + CMD_RESET_OFFSET) = CMD_RESET_DATA;
 }
+#endif

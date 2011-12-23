@@ -1,0 +1,4 @@
+pushd /home/phil/repos/mcrnc/CAVIUMSDK_1.7.2-244-FP1/OCTEON-SDK
+source env-setup OCTEON_CN56XX_PASS2 --runtime-model
+popd
+
