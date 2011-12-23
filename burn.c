@@ -1,7 +1,12 @@
-#define WORD uint16_t
+/* adjusting each MACRO refer to CHIP Manual */
+#define LOCK_LOCKER()
+#define UNLOCK_LOCKER()
+#define GET_CYCLE()
+
+#define FLASH_BASE_ADDR 0xFFFFFFFF90000000
+#define WORD  volatile uint16_t
 #define WORD_T volatile uint16_t
 #define SECTOR_SIZE 128*1024
-#define FLASH_BASE_ADDR 0xFFFFFFFF90000000
 #define MAX_BUFFER_WORD_COUNT 32
 
 #define CMD_RESET_OFFSET 0x000
@@ -19,9 +24,6 @@
 
 #define WRITE_TIMEOUT 409600 
 
-#define LOCK_LOCKER()
-#define UNLOCK_LOCKER()
-#define GET_CYCLE()
 
 /*
  * INPUT:
@@ -114,7 +116,7 @@ inline int sector_erase (void *sector_addr[], int num)
  * int size - how many bytes
  *
  */
-inline void program_buffer (void *dest_addr, void *data_addr, int size)
+inline int program_buffer (void *dest_addr, void *data_addr, int size)
 {
     WORD_T* src = (WORD_T*) data_addr;
     WORD_T* dst = (WORD_T*) dest_addr;
@@ -140,6 +142,38 @@ inline void program_buffer (void *dest_addr, void *data_addr, int size)
     *(WORD_T*)(sector_addr) = CMD_WRITE_CONFIRM_DATA;
 
     /* polling */
+    unsigned int start_cycle = GET_CYCLE();
+    while (1)
+    {
+        WORD_T status = *(WORD_T*)sector_addr; 
+        if (((status ^ *ptr) & (1<<7)) == 0)
+            break;  /* Data matches, this byte is done */
+        else if (status & (1<<5))
+        {
+            /* Hardware timeout, recheck status */
+            status = *(WORD_T*)sector_addr;
+            if (((status ^ *ptr) & (1<<7)) == 0)
+                break;  /* Data matches, this byte is done */
+            else
+            {
+                printf ("Hardware write timeout\n");
+                UNLOCK_LOCKER();
+                return -1;
+            }
+        }
+
+        if (GET_CYCLE() > start_cycle + WRITE_TIMEOUT)
+        {
+            printf ("Timeout writing block\n");
+            UNLOCK_LOCKER();
+            return -1;
+        }
+    }
+
+    /* Increment to the next byte */
+    ptr++;
+    offset+=2;
+
 
     /* write buffer abort reset */
     /* write unlock cycle 1 */
