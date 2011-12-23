@@ -1,0 +1,9 @@
+flash_burner
+Description:
+in order to create a framework to accelarate 
+flash programming, but KEEP IT AS SAMPLE AS POSSIBLE
+
+
+Interface:
+sector_erase();
+program_buffer();
