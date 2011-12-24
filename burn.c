@@ -86,7 +86,10 @@ inline int memcpy2flash (void *dest_addr, void *src_addr, SIZE_T size)
     if (extension2) {
         fill2 = (void*)MALLOC(extension2);
         printf ("0x%016llx\n", (sector_base_addr+n*SECTOR_SIZE)-extension2);
-        MEMCPY(fill2, (void*)((sector_base_addr+n*SECTOR_SIZE)-extension2-3), extension2+3);
+        for (i = 0; i < (sector_base_addr+n*SECTOR_SIZE)-extension2)|3; i++) {
+            *((uint8_t*)fill2+i) = *((uint8_t*)sector_base_addr+n*SECTOR_SIZE-extension2+i);
+        }
+        MEMCPY(fill2, (void*)(((sector_base_addr+n*SECTOR_SIZE)-extension2)&(~3)), extension2-);
     }
     
     for (i = 0; i < extension2; i ++) {

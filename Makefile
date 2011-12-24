@@ -18,6 +18,10 @@ CFLAGS_LOCAL = -g -O2 -W -Wall -Wno-unused-parameter
 
 include $(OCTEON_ROOT)/application.mk
 
+# run
+run: $(TARGET)
+	oct-sim $(TARGET) -quiet -noperf -numcores=1
+
 # run4
 run4: $(TARGET)
 	oct-sim $(TARGET) -quiet -noperf -numcores=4
