@@ -242,14 +242,14 @@ inline int program_sector_by_buffer (void *sector_addr, void *data_addr)
         unsigned int start_cycle = GET_CYCLE();
         while (1)
         {
-            WORD_T status = *(WORD_T*)sector_addr; 
-            if (((status ^ *src) & (1<<7)) == 0)
+            WORD_T status = *((WORD_T*)dst-1); 
+            if (((status ^ *((WORD_T*)src-1)) & (1<<7)) == 0)
                 break;  /* Data matches, this byte is done */
             else if (status & (1<<5))
             {
                 /* Hardware timeout, recheck status */
-                status = *(WORD_T*)sector_addr;
-                if (((status ^ *src) & (1<<7)) == 0)
+                status = *((WORD_T*)dst-1);
+                if (((status ^ *((WORD_T*)src-1)) & (1<<7)) == 0)
                     break;  /* Data matches, this byte is done */
                 else
                 {
